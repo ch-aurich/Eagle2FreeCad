@@ -20,6 +20,7 @@ holes = []
 parts = []
 edges = []
 packages = {}
+missingpackages = {}
 
 filename = QtGui.QFileDialog.getOpenFileName(None, 'Open file','')
 
@@ -50,26 +51,23 @@ with open(filename, 'rb') as csvfile:
     
   for dirname, dirnames, filenames in os.walk(libFolder):
     for filename in filenames:
-        #print os.path.join(dirname, filename)
         file = filename.split('.')
-        #print file
         if (file[len(file)-1]=='stp' or file[len(file)-1]=='step'):
-          file.pop(len(file)-1) #remove fileending (.stp or .step)
+          ending = file.pop(len(file)-1) #remove fileending (.stp or .step)
           file = ".".join(file)
-          #print '-->' + file
           if (file in packages):
             packages[file] = Part.read(os.path.join(dirname, filename))
             
       
   for row in csvArray:
     if (row[0]=='package'):
-      #package;C1;15.840;3.440;90;10µ;C0805;0.800;(OPTIONAL STEP MODEL NAME)
       partname = row[6];
       if (row[8]!=''):
         partname = row[8];
-      if (packages[partname] == ''):
+      if (packages[partname] == '' and not partname in missingpackages):
         print "missing package " + partname
-      else:
+	missingpackages[partname] = 'reported'
+      elif packages[partname] != '':
         p = packages[partname].copy()
         p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),float(row[4]))
         if (float(row[7])<0):
