@@ -21,7 +21,7 @@ parts = []
 edges = []
 packages = {}
 
-filename = QtGui.QFileDialog.getOpenFileName(None, 'Open file','/home')
+filename = QtGui.QFileDialog.getOpenFileName(None, 'Open file','')
 
 libFolder = ''
 
@@ -50,13 +50,13 @@ with open(filename, 'rb') as csvfile:
     
   for dirname, dirnames, filenames in os.walk(libFolder):
     for filename in filenames:
-        print os.path.join(dirname, filename)
+        #print os.path.join(dirname, filename)
         file = filename.split('.')
-        print file
+        #print file
         if (file[len(file)-1]=='stp' or file[len(file)-1]=='step'):
           file.pop(len(file)-1) #remove fileending (.stp or .step)
           file = ".".join(file)
-          print '-->' + file
+          #print '-->' + file
           if (file in packages):
             packages[file] = Part.read(os.path.join(dirname, filename))
             
@@ -67,7 +67,9 @@ with open(filename, 'rb') as csvfile:
       partname = row[6];
       if (row[8]!=''):
         partname = row[8];
-      if (packages[partname] != ''):
+      if (packages[partname] == ''):
+        print "missing package " + partname
+      else:
         p = packages[partname].copy()
         p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),float(row[4]))
         if (float(row[7])<0):
@@ -103,5 +105,6 @@ with open(filename, 'rb') as csvfile:
 
 Part.show(extruded)
 
-filename = QtGui.QFileDialog.getOpenFileName(None, 'SAVE as STEP Model','/home')
+filename = QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model','')
 extruded.exportStep(filename)
+
