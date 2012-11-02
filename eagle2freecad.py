@@ -56,6 +56,8 @@ tree = ET.ElementTree(file=filename)
 root = tree.getroot()
 drawing = root[0]
 dimensionLibrary = {}
+drillLibrary = {}
+millingLibrary = {}
 
 #find lines that make up the dimensions of pcbs directly
 for elem in drawing.iterfind('board/plain/wire[@layer="20"]'):
@@ -74,27 +76,25 @@ for elem in drawing.iterfind('board/libraries/library'):
       if part not in dimensionLibrary[library]:
         dimensionLibrary[library][part] = []
       dimensionLibrary[library][part].append(Part.makeLine((elem3.attrib['x1'], elem3.attrib['y1'],0), (elem3.attrib['x2'],elem3.attrib['y2'],0)))
-#    for elem3 in elem2.iterfind('hole'):
-#      if library not in drillLibrary:
-#        drillLibrary[library] = {}
-#      if part not in drillLibrary[library]:
-#        drillLibrary[library][part] = []
-#      drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill']),totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2))
+    for elem3 in elem2.iterfind('wire[@layer="46"]'):
+      if library not in millingLibrary:
+        millingLibrary[library] = {}
+      if part not in millingLibrary[library]:
+        millingLibrary[library][part] = []
+      millingLibrary[library][part].append(Part.makeLine((elem3.attrib['x1'], elem3.attrib['y1'],0), (elem3.attrib['x2'],elem3.attrib['y2'],0)))
+    for elem3 in elem2.iterfind('hole'):
+      if library not in drillLibrary:
+        drillLibrary[library] = {}
+      if part not in drillLibrary[library]:
+        drillLibrary[library][part] = []
+      drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill']),totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
 
 
 for elem in drawing.iterfind('board/elements/element'):
   #use parts from library to finish list of dimensions
   if elem.attrib['library'] in dimensionLibrary and elem.attrib['package'] in dimensionLibrary[elem.attrib['library']]:
-    if 'rot' in elem.attrib:
-      rot = float(elem.attrib['rot'].translate(None, string.letters))
-      mirror = elem.attrib['rot'].translate(None, string.digits)
-    else:
-      rot = 0
-      mirror = '' #TODO: use!?
-    for dimensionLineCpy in dimensionLibrary[elem.attrib['library']][elem.attrib['package']]:
-      dimensionLineCpy.rotate(Base.Vector(0,0,0), Base.Vector(0,0,1), rot)
-      dimensionLineCpy.translate(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0))
-      edges.append(dimensionLineCpy)
+    getPlacedPart(elem, dimensionLibrary[elem.attrib['library']][elem.attrib['package']])
+    edges.append(dimensionLineCpy)
   
   #collect used footprints
   footprint = elem.attrib['package']
