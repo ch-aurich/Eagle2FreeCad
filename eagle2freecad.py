@@ -35,7 +35,7 @@ def getPlacedModel(part, model):
     if (mirror[0] == 'M'):
       p.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 180)
       mirrorMultiplicator = -1
-    p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),totalHeight / 2))
+    p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),0))
     return p
 
 libFolder = ''
@@ -151,8 +151,8 @@ extruded = face.extrude(Base.Vector(0,0,totalHeight))
 #for hole in holes:
 #  extruded = extruded.cut(hole)
 for part in parts:
-  #extruded = extruded.fuse(part)
-  Part.show(part)
+  extruded = extruded.fuse(part)
+  #Part.show(part)
 
 Part.show(extruded)
 
