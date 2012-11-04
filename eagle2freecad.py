@@ -19,6 +19,70 @@ try:
 except ImportError:
     import xml.etree.ElementTree as ET
 
+def getAngle(x1,y1,x2,y2):
+  x_diff = x2-x1
+  y_diff = y2-y1
+  
+  if x_diff != 0:
+    angle = math.degrees(math.atan(y_diff / x_diff))
+  else:
+    angle = 90
+  
+  if (x2 < x1):
+    angle += 180
+  elif (x2==x1 and y2<y1):
+    angle += 180
+  
+  return angle
+
+def getCurvedLine(x1,y1,x2,y2,curve):
+  #middle between start and end point
+  x_mid = (x1 + x2) / 2
+  y_mid = (y1 + y2) / 2
+  print "middle point ", x_mid, "/", y_mid
+  
+  #difference between the points to calculate the angle of the direct line
+  angle = getAngle(x1,y1,x2,y2)
+  
+  print "angle ", angle;
+  
+  #add angle between mid and center points which is 90 degrees
+  angle += 90
+  
+  #distance from point 1 to the middle point
+  dist_1_mid = ((x1-x_mid)**2 + (y1-y_mid)**2)**0.5
+  print "dist_1_mid ", dist_1_mid
+  
+  #distance from the middle point to the center of the circle
+  dist_mid_center = dist_1_mid / math.tan(math.radians(curve/2))
+  print "dist_mid_center ", dist_mid_center
+    
+  x_center = x_mid + dist_mid_center * math.cos(math.radians(angle))
+  y_center = y_mid + dist_mid_center * math.sin(math.radians(angle))
+
+  radius = ( (x_center - x1)**2 + (y_center - y1)**2)**0.5
+  
+  print "center ", x_center, "/", y_center
+  
+  print "radius ", radius;
+  
+  
+  #get angle from center to middle point
+  angle = getAngle(x_center, y_center, x_mid, y_mid)
+  print "angle from center to middle point ", angle
+  #point 3 that is the last missing point to draw an arc
+  x3 = x_center + radius * math.cos(math.radians(angle))
+  y3 = y_center + radius * math.sin(math.radians(angle))
+  
+  print "3rd point", x3, "/", y3
+  
+  arc = Part.Arc(Base.Vector(x1,y1,0),Base.Vector(x3,y3,0),Base.Vector(x2,y2,0))
+  return arc
+
+
+#arc = getCurvedLine(1.95,1.05,3.4,2.5,50);Part.show(Part.Wire(arc.toShape()))
+
+
 
 def getPlacedModel(part, model):
     if 'rot' in part.attrib:
