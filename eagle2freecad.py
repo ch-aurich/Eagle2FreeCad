@@ -79,12 +79,14 @@ def getCurvedLine(x1,y1,x2,y2,curve):
   arc = Part.Arc(Base.Vector(x1,y1,0),Base.Vector(x3,y3,0),Base.Vector(x2,y2,0))
   return arc
 
+def getLine(elem):
+  if ('curve' not in elem):
+    return Part.makeLine((elem.attrib['x1'], elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
+  else:
+    return getCurvedLine(elem.attrib['x1'], elem.attrib['y1'],elem.attrib['x2'], elem.attrib['y2'], elem.attrib['curve'])
 
-#arc = getCurvedLine(1.95,1.05,3.4,2.5,50);Part.show(Part.Wire(arc.toShape()))
 
-
-
-def getPlacedModel(part, model):
+def getPlacedModel(part, model,height):
     if 'rot' in part.attrib:
       rot = float(part.attrib['rot'].translate(None, string.letters))
       mirror = part.attrib['rot'].translate(None, string.digits)
@@ -92,7 +94,7 @@ def getPlacedModel(part, model):
       rot = 0
       mirror='R'
     p = model.copy()
-    p.translate(Base.Vector(0,0,totalHeight / 2))
+    p.translate(Base.Vector(0,0,height / 2))
 
     p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),-rot)
     mirrorMultiplicator = 1
@@ -139,13 +141,13 @@ for elem in drawing.iterfind('board/libraries/library'):
         dimensionLibrary[library] = {}
       if part not in dimensionLibrary[library]:
         dimensionLibrary[library][part] = []
-      dimensionLibrary[library][part].append(Part.makeLine((elem3.attrib['x1'], elem3.attrib['y1'],0), (elem3.attrib['x2'],elem3.attrib['y2'],0)))
+      dimensionLibrary[library][part].append(getLine(elem3))
     for elem3 in elem2.iterfind('wire[@layer="46"]'):
       if library not in millingLibrary:
         millingLibrary[library] = {}
       if part not in millingLibrary[library]:
         millingLibrary[library][part] = []
-      millingLibrary[library][part].append(Part.makeLine((elem3.attrib['x1'], elem3.attrib['y1'],0), (elem3.attrib['x2'],elem3.attrib['y2'],0)))
+      millingLibrary[library][part].append(getLine(elem3))
     for elem3 in elem2.iterfind('hole'):
       if library not in drillLibrary:
         drillLibrary[library] = {}
@@ -157,8 +159,9 @@ for elem in drawing.iterfind('board/libraries/library'):
 for elem in drawing.iterfind('board/elements/element'):
   #use parts from library to finish list of dimensions
   if elem.attrib['library'] in dimensionLibrary and elem.attrib['package'] in dimensionLibrary[elem.attrib['library']]:
-    getPlacedPart(elem, dimensionLibrary[elem.attrib['library']][elem.attrib['package']])
-    edges.append(dimensionLineCpy)
+    for elem2 in dimensionLibrary[elem.attrib['library']][elem.attrib['package']]:
+      dimensionLineCpy = getPlacedModel(elem, elem2,0)
+      edges.append(dimensionLineCpy)
   
   #collect used footprints
   footprint = elem.attrib['package']
@@ -187,7 +190,7 @@ for elem in drawing.iterfind('board/elements/element'):
     print "missing package ", footprint
     missingpackages[footprint] = 'reported'
   elif packages[footprint] != '':
-    p = getPlacedModel(elem, packages[footprint])
+    p = getPlacedModel(elem, packages[footprint], totalHeight)
     parts.append(p)
 
 
@@ -196,13 +199,17 @@ newEdges = [];
 newEdges.append(edges.pop(0))
 nextCoordinate = newEdges[0].Curve.EndPoint
 while(len(edges)>0):
+  print "nextCoordinate: ", nextCoordinate
   for j, edge in enumerate(edges):
+    print "compare to: ", edges[j].Curve.StartPoint, "/" , edges[j].Curve.EndPoint
     if edges[j].Curve.StartPoint == nextCoordinate:
       nextCoordinate = edges[j].Curve.EndPoint
       newEdges.append(edges.pop(j))
+      break
     elif edges[j].Curve.EndPoint == nextCoordinate:
       nextCoordinate = edges[j].Curve.StartPoint
       newEdges.append(edges.pop(j))
+      break
 
 edges = newEdges
 
@@ -215,8 +222,8 @@ extruded = face.extrude(Base.Vector(0,0,totalHeight))
 #for hole in holes:
 #  extruded = extruded.cut(hole)
 for part in parts:
-  extruded = extruded.fuse(part)
-  #Part.show(part)
+  #extruded = extruded.fuse(part)
+  Part.show(part)
 
 Part.show(extruded)
 
