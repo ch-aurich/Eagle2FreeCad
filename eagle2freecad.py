@@ -112,8 +112,10 @@ dimensionLibrary = {}
 drillLibrary = {}
 millingLibrary = {}
 
+
+#get total Height of PCB
 totalHeight = 0
-layerThicknesses = drawing.find('board/designrules/param[@name="mtCopper"]').attrib['value'].
+layerThicknesses = drawing.find('board/designrules/param[@name="mtCopper"]').attrib['value']
 layerThicknesses = layerThicknesses.translate(None, string.letters).split(' ')
 
 layerSpacings    = drawing.find('board/designrules/param[@name="mtIsolate"]').attrib['value']
@@ -125,7 +127,6 @@ layerSetup       = layerSetup.replace('(', ' ').replace(')',' ')
 layerSetup       = layerSetup.replace('[', ' ').replace(']',' ').strip().split(' ')
 
 lastLayer        = -1
-
 for layer in layerSetup:
   print "Layer: ", layer
   print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
@@ -181,6 +182,7 @@ for elem in drawing.iterfind('board/elements/element'):
 
 #look for files with ending .stp or .step and import the models
 #if the packages are used on the pcb
+#TODO: add support for importing more than step models (freecad supports more natively)
 for dirname, dirnames, filenames in os.walk(libFolder):
   for filename in filenames:
       file = filename.split('.') #attention: files might have more than one dot in their name
@@ -205,6 +207,7 @@ for elem in drawing.iterfind('board/elements/element'):
 
 
 #sort edges to form a single closed 2D shape
+#TODO: find multiple closed shapes and print a meaningfull error if shapes are found that are not closed
 newEdges = [];
 newEdges.append(edges.pop(0))
 nextCoordinate = newEdges[0].Curve.EndPoint
@@ -224,19 +227,20 @@ while(len(edges)>0):
 edges = newEdges
 
 #extrude 2D shape to get a 3D model of the pcb
+#TODO: change this part to be able to have multiple PCBs in one brd
 dimension = Part.Wire(edges)
 face = Part.Face(dimension)
 face.translate(Base.Vector(0,0,-totalHeight/2))
 
 extruded = face.extrude(Base.Vector(0,0,totalHeight))
-#for hole in holes:
-#  extruded = extruded.cut(hole)
+for hole in holes:
+  extruded = extruded.cut(hole)
 for part in parts:
   #extruded = extruded.fuse(part)
   Part.show(part)
 
 Part.show(extruded)
 
-filename = QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model','')
+filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
 extruded.exportStep(filename)
 
