@@ -73,6 +73,12 @@ def getLine(elem):
   else:
     return getCurvedLine(elem.attrib['x1'], elem.attrib['y1'],elem.attrib['x2'], elem.attrib['y2'], elem.attrib['curve'])
 
+def getEdgeByParams(x1,y1,x2,y2,curve):
+  if (curve == 0):
+    return Part.makeLine((x1, y1,0), (x2,y2,0))
+  else:
+    return Part.Edge(getCurvedLine(x1, y1,x2, y2, curve))
+
 
 def getPlacedModel(part, model,height):
     if 'rot' in part.attrib:
@@ -101,9 +107,11 @@ filename = str(QtGui.QFileDialog.getOpenFileName(None, 'Open Eagle Board file','
 holes = []
 parts = []
 edges = []
+milling = []
 packages = {}
 missingpackages = {}
 
+milledVolumes = []
 
 tree = ET.ElementTree(file=filename)
 root = tree.getroot()
@@ -111,6 +119,7 @@ drawing = root[0]
 dimensionLibrary = {}
 drillLibrary = {}
 millingLibrary = {}
+milledVolumesLibrary = {}
 
 
 #get total Height of PCB
@@ -141,6 +150,10 @@ for elem in drawing.iterfind('board/plain/wire[@layer="20"]'):
   tmpedge = Part.makeLine((elem.attrib['x1'],elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
   edges.append(tmpedge);
 
+#find lines that make up the milling of pcbs directly
+for elem in drawing.iterfind('board/plain/wire[@layer="46"]'):
+  tmpedge = Part.makeLine((elem.attrib['x1'],elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
+  milling.append(tmpedge);
 
 #find parts that contain dimension lines or holes or millings
 for elem in drawing.iterfind('board/libraries/library'):
@@ -165,6 +178,33 @@ for elem in drawing.iterfind('board/libraries/library'):
       if part not in drillLibrary[library]:
         drillLibrary[library][part] = []
       drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill']),totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
+    for elem3 in elem2.iterfind('polygon[@layer="46"]'):
+      if library not in milledVolumesLibrary:
+        milledVolumesLibrary[library] = {}
+      if part not in milledVolumesLibrary[library]:
+        milledVolumesLibrary[library][part] = []
+      millwire = []
+      lastPoint = ''
+      firstPoint = ''
+      curve = 0
+      for elem4 in elem3.iterfind('vertex'):
+        nextPoint = Base.Vector(float(elem4.attrib['x']),float(elem4.attrib['y']),0)
+        if (lastPoint == ''):
+          firstPoint = nextPoint
+        else:
+          millwire.append(getEdgeByParams(lastPoint[0], lastPoint[1], nextPoint[0], nextPoint[1], curve))
+        curve = 0
+        if 'curve' in elem4.attrib:
+          curve = float(elem4.attrib['curve'])
+
+        lastPoint = nextPoint
+      millwire.append(getEdgeByParams(lastPoint[0], lastPoint[1], firstPoint[0], firstPoint[1], curve))
+        
+      millwire = Part.Wire(millwire)
+      millwire = Part.Face(millwire)
+      millwire.translate(Base.Vector(0,0,-totalHeight/2))
+      milledVolumesLibrary[library][part].append(millwire.extrude(Base.Vector(0,0,totalHeight)))
+
 
 
 for elem in drawing.iterfind('board/elements/element'):
@@ -173,6 +213,11 @@ for elem in drawing.iterfind('board/elements/element'):
     for elem2 in dimensionLibrary[elem.attrib['library']][elem.attrib['package']]:
       dimensionLineCpy = getPlacedModel(elem, elem2,0)
       edges.append(dimensionLineCpy)
+  #use parts from library to finish list of millings
+  if elem.attrib['library'] in millingLibrary and elem.attrib['package'] in millingLibrary[elem.attrib['library']]:
+    for elem2 in millingLibrary[elem.attrib['library']][elem.attrib['package']]:
+      millingLineCpy = getPlacedModel(elem, elem2,0)
+      milling.append(millingLineCpy)
   
   #collect used footprints
   footprint = elem.attrib['package']
@@ -226,11 +271,37 @@ while(len(edges)>0):
 
 edges = newEdges
 
+
+
+
+#sort millings to form a single closed 2D shape
+newMilling = [];
+newMilling.append(milling.pop(0))
+nextCoordinate = newEdges[0].Curve.EndPoint
+while(len(edges)>0):
+  print "nextCoordinate: ", nextCoordinate
+  for j, edge in enumerate(edges):
+    print "compare to: ", edges[j].Curve.StartPoint, "/" , edges[j].Curve.EndPoint
+    if edges[j].Curve.StartPoint == nextCoordinate:
+      nextCoordinate = edges[j].Curve.EndPoint
+      newEdges.append(edges.pop(j))
+      break
+    elif edges[j].Curve.EndPoint == nextCoordinate:
+      nextCoordinate = edges[j].Curve.StartPoint
+      newEdges.append(edges.pop(j))
+      break
+
+edges = newEdges
+
+
+
+
 #extrude 2D shape to get a 3D model of the pcb
 #TODO: change this part to be able to have multiple PCBs in one brd
 dimension = Part.Wire(edges)
 face = Part.Face(dimension)
 face.translate(Base.Vector(0,0,-totalHeight/2))
+
 
 extruded = face.extrude(Base.Vector(0,0,totalHeight))
 for hole in holes:
