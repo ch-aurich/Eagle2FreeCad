@@ -110,6 +110,26 @@ def getPlacedModel(part, model,height):
     p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),0))
     return p
 
+def getWireFromPolygon(elem):
+  millwire = []
+  lastPoint = ''
+  firstPoint = ''
+  curve = 0
+  for elem2 in elem.iterfind('vertex'):
+    nextPoint = Base.Vector(float(elem2.attrib['x']),float(elem2.attrib['y']),0)
+    if (lastPoint == ''):
+      firstPoint = nextPoint
+    else:
+      millwire.append(getEdgeByParams(lastPoint[0], lastPoint[1], nextPoint[0], nextPoint[1], curve))
+    curve = 0
+    if 'curve' in elem2.attrib:
+      curve = float(elem2.attrib['curve'])
+
+    lastPoint = nextPoint
+  millwire.append(getEdgeByParams(lastPoint[0], lastPoint[1], firstPoint[0], firstPoint[1], curve))
+    
+  return Part.Wire(millwire)
+
 libFolder = ''
 filename = ''
 libFolder = str(QtGui.QFileDialog.getExistingDirectory(None, "Select Directory for Libraries"))
@@ -172,24 +192,7 @@ for elem in drawing.iterfind('board/libraries/library'):
         milledVolumesLibrary[library] = {}
       if part not in milledVolumesLibrary[library]:
         milledVolumesLibrary[library][part] = []
-      millwire = []
-      lastPoint = ''
-      firstPoint = ''
-      curve = 0
-      for elem4 in elem3.iterfind('vertex'):
-        nextPoint = Base.Vector(float(elem4.attrib['x']),float(elem4.attrib['y']),0)
-        if (lastPoint == ''):
-          firstPoint = nextPoint
-        else:
-          millwire.append(getEdgeByParams(lastPoint[0], lastPoint[1], nextPoint[0], nextPoint[1], curve))
-        curve = 0
-        if 'curve' in elem4.attrib:
-          curve = float(elem4.attrib['curve'])
-
-        lastPoint = nextPoint
-      millwire.append(getEdgeByParams(lastPoint[0], lastPoint[1], firstPoint[0], firstPoint[1], curve))
-        
-      millwire = Part.Wire(millwire)
+      millwire = getWireFromPolygon(elem3)
       millwire = Part.Face(millwire)
       millwire.translate(Base.Vector(0,0,-totalHeight/2))
       milledVolumesLibrary[library][part].append(millwire.extrude(Base.Vector(0,0,totalHeight)))
@@ -207,6 +210,10 @@ for elem in drawing.iterfind('board/elements/element'):
     for elem2 in millingLibrary[elem.attrib['library']][elem.attrib['package']]:
       millingLineCpy = getPlacedModel(elem, elem2,0)
       milling.append(millingLineCpy)
+  if elem.attrib['library'] in milledVolumesLibrary and elem.attrib['package'] in milledVolumesLibrary[elem.attrib['library']]:
+    for elem2 in milledVolumesLibrary[elem.attrib['library']][elem.attrib['package']]:
+      milledVolume = getPlacedModel(elem, elem2,0)
+      milledVolumes.append(milledVolume)
   
   #collect used footprints
   footprint = elem.attrib['package']
@@ -268,17 +275,17 @@ nextCoordinate = newEdges[0].Curve.EndPoint
 while(len(edges)>0):
   print "nextCoordinate: ", nextCoordinate
   for j, edge in enumerate(edges):
-    print "compare to: ", edges[j].Curve.StartPoint, "/" , edges[j].Curve.EndPoint
-    if edges[j].Curve.StartPoint == nextCoordinate:
-      nextCoordinate = edges[j].Curve.EndPoint
-      newEdges.append(edges.pop(j))
+    print "compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint
+    if milling[j].Curve.StartPoint == nextCoordinate:
+      nextCoordinate = milling[j].Curve.EndPoint
+      newMilling.append(milling.pop(j))
       break
-    elif edges[j].Curve.EndPoint == nextCoordinate:
-      nextCoordinate = edges[j].Curve.StartPoint
-      newEdges.append(edges.pop(j))
+    elif milling[j].Curve.EndPoint == nextCoordinate:
+      nextCoordinate = milling[j].Curve.StartPoint
+      newMilling.append(milling.pop(j))
       break
 
-edges = newEdges
+milling = newMilling
 
 
 
@@ -290,8 +297,12 @@ face.translate(Base.Vector(0,0,-totalHeight/2))
 
 
 extruded = face.extrude(Base.Vector(0,0,totalHeight))
+
+for milledVolume in milledVolumes:
+  extruded = extruded.cut(milledVolume)
 #for hole in holes:
 #  extruded = extruded.cut(hole)
+
 for part in parts:
   #extruded = extruded.fuse(part)
   Part.show(part)
