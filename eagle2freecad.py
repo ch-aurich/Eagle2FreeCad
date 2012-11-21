@@ -127,6 +127,7 @@ filename = str(QtGui.QFileDialog.getOpenFileName(None, 'Open Eagle Board file','
 holes = []
 parts = []
 edges = []
+PCBs = []
 milling = []
 packages = {}
 missingpackages = {}
@@ -259,10 +260,11 @@ for elem in drawing.iterfind('board/elements/element'):
 
 
 #sort edges to form a single closed 2D shape
-#TODO: find multiple closed shapes and print a meaningfull error if shapes are found that are not closed
+#TODO: print a meaningfull error if shapes are found that are not closed
 newEdges = [];
 newEdges.append(edges.pop(0))
 nextCoordinate = newEdges[0].Curve.EndPoint
+firstCoordinate = newEdges[0].Curve.StartPoint
 while(len(edges)>0):
   print "nextCoordinate: ", nextCoordinate
   for j, edge in enumerate(edges):
@@ -275,8 +277,16 @@ while(len(edges)>0):
       nextCoordinate = edges[j].Curve.StartPoint
       newEdges.append(edges.pop(j))
       break
-
-edges = newEdges
+  if nextCoordinate == firstCoordinate:
+    newEdges = Part.Wire(newEdges)
+    newEdges = Part.Face(newEdges)
+    newEdges.translate(Base.Vector(0,0,-totalHeight/2))
+    newEdges = newEdges.extrude(Base.Vector(0,0,totalHeight))
+    PCBs.append(newEdges)
+    newEdges = [];
+    newEdges.append(edges.pop(0))
+    nextCoordinate = newEdges[0].Curve.EndPoint
+    firstCoordinate = newEdges[0].Curve.StartPoint
 
 
 
@@ -284,44 +294,70 @@ edges = newEdges
 #sort millings to form a single closed 2D shape
 newMilling = [];
 newMilling.append(milling.pop(0))
-nextCoordinate = newEdges[0].Curve.EndPoint
-while(len(edges)>0):
+nextCoordinate = newMilling[0].Curve.EndPoint
+firstCoordinate = newMilling[0].Curve.StartPoint
+while(len(milling)>0):
   print "nextCoordinate: ", nextCoordinate
-  for j, edge in enumerate(edges):
+  for j, edge in enumerate(milling):
     print "compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint
     if milling[j].Curve.StartPoint == nextCoordinate:
       nextCoordinate = milling[j].Curve.EndPoint
       newMilling.append(milling.pop(j))
-      break
     elif milling[j].Curve.EndPoint == nextCoordinate:
       nextCoordinate = milling[j].Curve.StartPoint
       newMilling.append(milling.pop(j))
-      break
-
-milling = newMilling
-
-
-
-
-#extrude 2D shape to get a 3D model of the pcb
-#TODO: change this part to be able to have multiple PCBs in one brd
-dimension = Part.Wire(edges)
-face = Part.Face(dimension)
-face.translate(Base.Vector(0,0,-totalHeight/2))
+  if nextCoordinate == firstCoordinate:
+    newMilling = Part.Wire(newMilling)
+    newMilling = Part.Face(newMilling)
+    newMilling.translate(Base.Vector(0,0,-totalHeight/2))
+    milledVolumes.append(newMilling.extrude(Base.Vector(0,0,totalHeight)))
+    newMilling = [];
+    newMilling.append(milling.pop(0))
+    nextCoordinate = newMilling[0].Curve.EndPoint
+    firstCoordinate = newMilling[0].Curve.StartPoint
 
 
-extruded = face.extrude(Base.Vector(0,0,totalHeight))
+for extruded in PCBs:
+  #search for orientation of each pcb in 3d space, save it (no transformation yet!)
+  angle = 0;
+  axis = Base.Vector(0,0,1)
+  position = Base.Vector(0,0,0)
+  
+  for elem in drawing.iterfind('board/plain/text[@layer="100"]'):
+    if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
+      print "found $text"
+      keyValue = elem.text.split('=')
+      if keyValue[0] == "angle":
+        angle = float(keyValue[1])
+        print "found angle"
+      if keyValue[0] == "axis":
+        splitValue = keyValue[1].split(',')
+        axis = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
+        print "found axis"
+      if keyValue[0] == "position":
+        splitValue = keyValue[1].split(',')
+        position = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
+        print "found position"
+  
+  #remove milled areas of the pcb
+  for milledVolume in milledVolumes:
+    extruded = extruded.cut(milledVolume)
 
-for milledVolume in milledVolumes:
-  extruded = extruded.cut(milledVolume)
-for hole in holes:
-  extruded = extruded.cut(hole)
-for part in parts:
-  #extruded = extruded.fuse(part)
-  Part.show(part)
+  #cut out all drilled holes
+  for hole in holes:
+    extruded = extruded.cut(hole)
 
-Part.show(extruded)
+  #combine pcb and part if the part is on this pcb
+  for part in parts:
+    if extruded.isInside(part.Placement.Base, 0.000001, True):
+      extruded = extruded.fuse(part)
 
-filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
-extruded.exportStep(filename)
+  #now when the pcb if fully populated perform transformations to align it correctly in 3d space
+  extruded.rotate(Base.Vector(0,0,0), axis, angle)
+  extruded.translate(position)
+  #display the part
+  Part.show(extruded)
+
+#filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
+#extruded.exportStep(filename)
 
