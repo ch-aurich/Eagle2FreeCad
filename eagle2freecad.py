@@ -39,42 +39,30 @@ def getCurvedLine(x1,y1,x2,y2,curve):
   #middle between start and end point
   x_mid = (x1 + x2) / 2
   y_mid = (y1 + y2) / 2
-  print "middle point ", x_mid, "/", y_mid
   
   #difference between the points to calculate the angle of the direct line
   angle = getAngle(x1,y1,x2,y2)
   
-  print "angle ", angle;
   
   #add angle between mid and center points which is 90 degrees
   angle += 90
   
   #distance from point 1 to the middle point
   dist_1_mid = ((x1-x_mid)**2 + (y1-y_mid)**2)**0.5
-  print "dist_1_mid ", dist_1_mid
   
   #distance from the middle point to the center of the circle
   dist_mid_center = dist_1_mid / math.tan(math.radians(curve/2))
-  print "dist_mid_center ", dist_mid_center
     
   x_center = x_mid + dist_mid_center * math.cos(math.radians(angle))
   y_center = y_mid + dist_mid_center * math.sin(math.radians(angle))
 
   radius = ( (x_center - x1)**2 + (y_center - y1)**2)**0.5
   
-  print "center ", x_center, "/", y_center
-  
-  print "radius ", radius;
-  
-  
   #get angle from center to middle point
   angle = getAngle(x_center, y_center, x_mid, y_mid)
-  print "angle from center to middle point ", angle
   #point 3 that is the last missing point to draw an arc
   x3 = x_center + radius * math.cos(math.radians(angle))
   y3 = y_center + radius * math.sin(math.radians(angle))
-  
-  print "3rd point", x3, "/", y3
   
   arc = Part.Arc(Base.Vector(x1,y1,0),Base.Vector(x3,y3,0),Base.Vector(x2,y2,0))
   return arc
@@ -136,7 +124,6 @@ libFolder = str(QtGui.QFileDialog.getExistingDirectory(None, "Select Directory f
 filename = str(QtGui.QFileDialog.getOpenFileName(None, 'Open Eagle Board file',''))
 
 
-totalHeight = 1.5 #TODO: read this from eagle file
 holes = []
 parts = []
 edges = []
@@ -153,6 +140,30 @@ dimensionLibrary = {}
 drillLibrary = {}
 millingLibrary = {}
 milledVolumesLibrary = {}
+
+
+#get total Height of PCB
+totalHeight = 0
+layerThicknesses = drawing.find('board/designrules/param[@name="mtCopper"]').attrib['value']
+layerThicknesses = layerThicknesses.translate(None, string.letters).split(' ')
+
+layerSpacings    = drawing.find('board/designrules/param[@name="mtIsolate"]').attrib['value']
+layerSpacings    = layerSpacings.translate(None, string.letters).split(' ')
+
+layerSetup       = drawing.find('board/designrules/param[@name="layerSetup"]').attrib['value']
+layerSetup       = layerSetup.replace('*',' ').replace('+',' ')
+layerSetup       = layerSetup.replace('(', ' ').replace(')',' ')
+layerSetup       = layerSetup.replace('[', ' ').replace(']',' ').strip().split(' ')
+
+lastLayer        = -1
+for layer in layerSetup:
+  print "Layer: ", layer
+  print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
+  totalHeight += float(layerThicknesses[int(layer)-1])
+  if (lastLayer >= 0):
+    print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
+    totalHeight += float(layerSpacings[int(lastLayer)-1])
+  lastLayer = layer
 
 #find lines that make up the dimensions of pcbs directly
 for elem in drawing.iterfind('board/plain/wire[@layer="20"]'):
@@ -223,6 +234,7 @@ for elem in drawing.iterfind('board/elements/element'):
 
 #look for files with ending .stp or .step and import the models
 #if the packages are used on the pcb
+#TODO: add support for importing more than step models (freecad supports more natively)
 for dirname, dirnames, filenames in os.walk(libFolder):
   for filename in filenames:
       file = filename.split('.') #attention: files might have more than one dot in their name
@@ -247,6 +259,7 @@ for elem in drawing.iterfind('board/elements/element'):
 
 
 #sort edges to form a single closed 2D shape
+#TODO: find multiple closed shapes and print a meaningfull error if shapes are found that are not closed
 newEdges = [];
 newEdges.append(edges.pop(0))
 nextCoordinate = newEdges[0].Curve.EndPoint
@@ -291,6 +304,7 @@ milling = newMilling
 
 
 #extrude 2D shape to get a 3D model of the pcb
+#TODO: change this part to be able to have multiple PCBs in one brd
 dimension = Part.Wire(edges)
 face = Part.Face(dimension)
 face.translate(Base.Vector(0,0,-totalHeight/2))
@@ -300,15 +314,14 @@ extruded = face.extrude(Base.Vector(0,0,totalHeight))
 
 for milledVolume in milledVolumes:
   extruded = extruded.cut(milledVolume)
-#for hole in holes:
-#  extruded = extruded.cut(hole)
-
+for hole in holes:
+  extruded = extruded.cut(hole)
 for part in parts:
   #extruded = extruded.fuse(part)
   Part.show(part)
 
 Part.show(extruded)
 
-filename = QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model','')
+filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
 extruded.exportStep(filename)
 
