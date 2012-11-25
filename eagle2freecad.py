@@ -81,21 +81,50 @@ def getEdgeByParams(x1,y1,x2,y2,curve):
 
 
 def getPlacedModel(part, model,height):
-    if 'rot' in part.attrib:
-      rot = float(part.attrib['rot'].translate(None, string.letters))
-      mirror = part.attrib['rot'].translate(None, string.digits)
-    else:
-      rot = 0
-      mirror='R'
+    useAttributeForPosition = False
+    
     p = model.copy()
-    p.translate(Base.Vector(0,0,height / 2))
-
-    p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),-rot)
-    mirrorMultiplicator = 1
-    if (mirror[0] == 'M'):
-      p.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 180)
-      mirrorMultiplicator = -1
-    p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),0))
+    
+    angle = elem.find('attribute[@name="ANGLE"]')
+    if (angle != None):
+      print "#"
+      angle = angle.attrib['value'].split(',')
+      angle = float(angle[0])
+      axis = elem.find('attribute[@name="AXIS"]')
+      if (axis != None):
+        print "#"
+        axis = axis.attrib['value'].split(',')
+        axis = Base.Vector(float(axis[0]),float(axis[1]),float(axis[2]))
+        position = elem.find('attribute[@name="POSITION"]')
+        if (position != None):        
+          print "#"
+          position = position.attrib['value'].split(',')
+          position = Base.Vector(float(position[0]),float(position[1]),float(position[2]))
+          
+          p.rotate(Base.Vector(0,0,0), axis, angle)
+          p.translate(position)
+          useAttributeForPosition = True
+          print "##################################################################################"
+    else:
+      print angle
+    
+    if (useAttributeForPosition == False):
+      if 'rot' in part.attrib:
+        rot = float(part.attrib['rot'].translate(None, string.letters))
+        mirror = part.attrib['rot'].translate(None, string.digits)
+      else:
+        rot = 0
+        mirror='R'
+      
+      p.translate(Base.Vector(0,0,height / 2))
+      
+      p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),-rot)
+      mirrorMultiplicator = 1
+      if (mirror[0] == 'M'):
+        p.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 180)
+        mirrorMultiplicator = -1
+      p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),0))
+      print "--------------------------------------------------------------------------------------"
     return p
 
 def getWireFromPolygon(elem):
@@ -351,12 +380,16 @@ for extruded in PCBs:
   for part in parts:
     if extruded.isInside(part.Placement.Base, 0.000001, True):
       extruded = extruded.fuse(part)
+      parts.remove(part)
 
   #now when the pcb if fully populated perform transformations to align it correctly in 3d space
   extruded.rotate(Base.Vector(0,0,0), axis, angle)
   extruded.translate(position)
   #display the part
   Part.show(extruded)
+
+for part in parts:
+  Part.show(part)
 
 #filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
 #extruded.exportStep(filename)
