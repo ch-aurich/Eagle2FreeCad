@@ -87,26 +87,26 @@ def getPlacedModel(part, model,height):
     
     angle = elem.find('attribute[@name="ANGLE"]')
     if (angle != None):
-      print "#"
+      #print "#"
       angle = angle.attrib['value'].split(',')
       angle = float(angle[0])
       axis = elem.find('attribute[@name="AXIS"]')
       if (axis != None):
-        print "#"
+        #print "#"
         axis = axis.attrib['value'].split(',')
         axis = Base.Vector(float(axis[0]),float(axis[1]),float(axis[2]))
         position = elem.find('attribute[@name="POSITION"]')
         if (position != None):        
-          print "#"
+          #print "#"
           position = position.attrib['value'].split(',')
           position = Base.Vector(float(position[0]),float(position[1]),float(position[2]))
           
           p.rotate(Base.Vector(0,0,0), axis, angle)
           p.translate(position)
           useAttributeForPosition = True
-          print "##################################################################################"
-    else:
-      print angle
+          #print "##################################################################################"
+    #else:
+      #print angle
     
     if (useAttributeForPosition == False):
       if 'rot' in part.attrib:
@@ -124,7 +124,7 @@ def getPlacedModel(part, model,height):
         p.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 180)
         mirrorMultiplicator = -1
       p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),0))
-      print "--------------------------------------------------------------------------------------"
+      #print "--------------------------------------------------------------------------------------"
     return p
 
 def getWireFromPolygon(elem):
@@ -187,11 +187,11 @@ layerSetup       = layerSetup.replace('[', ' ').replace(']',' ').strip().split('
 
 lastLayer        = -1
 for layer in layerSetup:
-  print "Layer: ", layer
-  print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
+  #print "Layer: ", layer
+  #print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
   totalHeight += float(layerThicknesses[int(layer)-1])
   if (lastLayer >= 0):
-    print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
+    #print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
     totalHeight += float(layerSpacings[int(lastLayer)-1])
   lastLayer = layer
 
@@ -295,9 +295,9 @@ newEdges.append(edges.pop(0))
 nextCoordinate = newEdges[0].Curve.EndPoint
 firstCoordinate = newEdges[0].Curve.StartPoint
 while(len(edges)>0):
-  print "nextCoordinate: ", nextCoordinate
+  #print "nextCoordinate: ", nextCoordinate
   for j, edge in enumerate(edges):
-    print "compare to: ", edges[j].Curve.StartPoint, "/" , edges[j].Curve.EndPoint
+    #print "compare to: ", edges[j].Curve.StartPoint, "/" , edges[j].Curve.EndPoint
     if edges[j].Curve.StartPoint == nextCoordinate:
       nextCoordinate = edges[j].Curve.EndPoint
       newEdges.append(edges.pop(j))
@@ -312,10 +312,11 @@ while(len(edges)>0):
     newEdges.translate(Base.Vector(0,0,-totalHeight/2))
     newEdges = newEdges.extrude(Base.Vector(0,0,totalHeight))
     PCBs.append(newEdges)
-    newEdges = [];
-    newEdges.append(edges.pop(0))
-    nextCoordinate = newEdges[0].Curve.EndPoint
-    firstCoordinate = newEdges[0].Curve.StartPoint
+    if (len(edges)>0):
+      newEdges = [];
+      newEdges.append(edges.pop(0))
+      nextCoordinate = newEdges[0].Curve.EndPoint
+      firstCoordinate = newEdges[0].Curve.StartPoint
 
 
 
@@ -326,9 +327,9 @@ newMilling.append(milling.pop(0))
 nextCoordinate = newMilling[0].Curve.EndPoint
 firstCoordinate = newMilling[0].Curve.StartPoint
 while(len(milling)>0):
-  print "nextCoordinate: ", nextCoordinate
+  #print "nextCoordinate: ", nextCoordinate
   for j, edge in enumerate(milling):
-    print "compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint
+    #print "compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint
     if milling[j].Curve.StartPoint == nextCoordinate:
       nextCoordinate = milling[j].Curve.EndPoint
       newMilling.append(milling.pop(j))
@@ -340,10 +341,11 @@ while(len(milling)>0):
     newMilling = Part.Face(newMilling)
     newMilling.translate(Base.Vector(0,0,-totalHeight/2))
     milledVolumes.append(newMilling.extrude(Base.Vector(0,0,totalHeight)))
-    newMilling = [];
-    newMilling.append(milling.pop(0))
-    nextCoordinate = newMilling[0].Curve.EndPoint
-    firstCoordinate = newMilling[0].Curve.StartPoint
+    if (len(milling)>0):
+      newMilling = [];
+      newMilling.append(milling.pop(0))
+      nextCoordinate = newMilling[0].Curve.EndPoint
+      firstCoordinate = newMilling[0].Curve.StartPoint
 
 
 for extruded in PCBs:
@@ -354,19 +356,19 @@ for extruded in PCBs:
   
   for elem in drawing.iterfind('board/plain/text[@layer="100"]'):
     if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
-      print "found $text"
+     #print "found $text"
       keyValue = elem.text.split('=')
       if keyValue[0] == "angle":
         angle = float(keyValue[1])
-        print "found angle"
+       #print "found angle"
       if keyValue[0] == "axis":
         splitValue = keyValue[1].split(',')
         axis = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
-        print "found axis"
+       #print "found axis"
       if keyValue[0] == "position":
         splitValue = keyValue[1].split(',')
         position = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
-        print "found position"
+       #print "found position"
   
   #remove milled areas of the pcb
   for milledVolume in milledVolumes:
