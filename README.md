@@ -6,8 +6,7 @@ This expansion to freecad imports your eagle boards. If you have STEP Models of 
 License
 ======
 
-This software is licenced under CC-BY-NC (http://creativecommons.org/licenses/by-nc/2.0/)
-Please contact Christian Aurich (c-aurich.de) for commercial use of this software.
+This software is licenced under CC-BY (http://creativecommons.org/licenses/by/3.0/) but feel free to donate  to the Open Source Hardware Foundation (http://www.oshwa.org/) if you want to pay something for the usage of this software.
 
 Installation
 ===========

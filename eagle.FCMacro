@@ -1,8 +1,8 @@
-#################################################################################
-#This is licenced under CC-BY-NC (http://creativecommons.org/licenses/by-nc/2.0/)
-#Please contact Christian Aurich for commercial use of this software.
-#http://c-aurich.de
-#################################################################################
+#########################################################################################
+#This software is licenced under CC-BY (http://creativecommons.org/licenses/by/3.0/) 
+#but feel free to donate  to the Open Source Hardware Foundation (http://www.oshwa.org/)
+#if you want to pay something for the usage of this software.
+#########################################################################################
 
 import Part
 from FreeCAD import Base
