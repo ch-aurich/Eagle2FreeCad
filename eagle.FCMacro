@@ -100,9 +100,11 @@ def getPlacedModel(part, model,height):
           #print "#"
           position = position.attrib['value'].split(',')
           position = Base.Vector(float(position[0]),float(position[1]),float(position[2]))
-          
-          p.rotate(Base.Vector(0,0,0), axis, angle)
+          if (not angle == 0):
+            p.rotate(Base.Vector(0,0,0), axis, angle)
+          print "done rotation"
           p.translate(position)
+          print "done position"
           useAttributeForPosition = True
           #print "##################################################################################"
     #else:
