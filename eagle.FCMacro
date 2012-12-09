@@ -324,31 +324,31 @@ while(len(edges)>0):
 
 
 #sort millings to form a single closed 2D shape
-newMilling = [];
-newMilling.append(milling.pop(0))
-nextCoordinate = newMilling[0].Curve.EndPoint
-firstCoordinate = newMilling[0].Curve.StartPoint
-while(len(milling)>0):
-  #print "nextCoordinate: ", nextCoordinate
-  for j, edge in enumerate(milling):
-    #print "compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint
-    if milling[j].Curve.StartPoint == nextCoordinate:
-      nextCoordinate = milling[j].Curve.EndPoint
-      newMilling.append(milling.pop(j))
-    elif milling[j].Curve.EndPoint == nextCoordinate:
-      nextCoordinate = milling[j].Curve.StartPoint
-      newMilling.append(milling.pop(j))
-  if nextCoordinate == firstCoordinate:
-    newMilling = Part.Wire(newMilling)
-    newMilling = Part.Face(newMilling)
-    newMilling.translate(Base.Vector(0,0,-totalHeight/2))
-    milledVolumes.append(newMilling.extrude(Base.Vector(0,0,totalHeight)))
-    if (len(milling)>0):
-      newMilling = [];
-      newMilling.append(milling.pop(0))
-      nextCoordinate = newMilling[0].Curve.EndPoint
-      firstCoordinate = newMilling[0].Curve.StartPoint
-
+if not milling==[]:
+  newMilling = [];
+  newMilling.append(milling.pop(0))
+  nextCoordinate = newMilling[0].Curve.EndPoint
+  firstCoordinate = newMilling[0].Curve.StartPoint
+  while(len(milling)>0):
+    #print "nextCoordinate: ", nextCoordinate
+    for j, edge in enumerate(milling):
+      #print "compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint
+      if milling[j].Curve.StartPoint == nextCoordinate:
+        nextCoordinate = milling[j].Curve.EndPoint
+        newMilling.append(milling.pop(j))
+      elif milling[j].Curve.EndPoint == nextCoordinate:
+        nextCoordinate = milling[j].Curve.StartPoint
+        newMilling.append(milling.pop(j))
+    if nextCoordinate == firstCoordinate:
+      newMilling = Part.Wire(newMilling)
+      newMilling = Part.Face(newMilling)
+      newMilling.translate(Base.Vector(0,0,-totalHeight/2))
+      milledVolumes.append(newMilling.extrude(Base.Vector(0,0,totalHeight)))
+      if (len(milling)>0):
+        newMilling = [];
+        newMilling.append(milling.pop(0))
+        nextCoordinate = newMilling[0].Curve.EndPoint
+        firstCoordinate = newMilling[0].Curve.StartPoint
 
 for extruded in PCBs:
   #search for orientation of each pcb in 3d space, save it (no transformation yet!)
