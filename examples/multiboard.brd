@@ -53,7 +53,7 @@
 <layer number="96" name="Values" color="7" fill="1" visible="no" active="no"/>
 <layer number="97" name="Info" color="7" fill="1" visible="no" active="no"/>
 <layer number="98" name="Guide" color="6" fill="1" visible="no" active="no"/>
-<layer number="100" name="Assembly" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="223" name="Assembly" color="7" fill="1" visible="yes" active="yes"/>
 </layers>
 <board>
 <plain>
@@ -85,12 +85,12 @@
 <wire x1="66.675" y1="8.89" x2="66.675" y2="11.43" width="0" layer="20"/>
 <wire x1="66.675" y1="11.43" x2="64.135" y2="11.43" width="0" layer="20"/>
 <wire x1="64.135" y1="11.43" x2="64.135" y2="34.29" width="0" layer="20"/>
-<text x="96.52" y="12.7" size="1.778" layer="100" rot="R180">angle=-90</text>
-<text x="96.52" y="15.24" size="1.778" layer="100" rot="R180">axis=0,1,0</text>
-<text x="96.52" y="17.78" size="1.778" layer="100" rot="R180">position=12.06,0,-66.175</text>
-<text x="31.115" y="33.02" size="1.778" layer="100">angle=-90</text>
-<text x="31.115" y="30.48" size="1.778" layer="100">axis=0,1,0</text>
-<text x="31.115" y="27.94" size="1.778" layer="100">position=18.51,0,-27.44</text>
+<text x="96.52" y="12.7" size="1.778" layer="223" rot="R180">angle=-90</text>
+<text x="96.52" y="15.24" size="1.778" layer="223" rot="R180">axis=0,1,0</text>
+<text x="96.52" y="17.78" size="1.778" layer="223" rot="R180">position=12.06,0,-66.175</text>
+<text x="31.115" y="33.02" size="1.778" layer="223">angle=-90</text>
+<text x="31.115" y="30.48" size="1.778" layer="223">axis=0,1,0</text>
+<text x="31.115" y="27.94" size="1.778" layer="223">position=18.51,0,-27.44</text>
 </plain>
 <libraries>
 <library name="rcl">
