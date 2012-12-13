@@ -230,6 +230,13 @@ for elem in drawing.iterfind('board/libraries/library'):
       if part not in drillLibrary[library]:
         drillLibrary[library][part] = []
       drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill']),totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
+    for elem3 in elem2.iterfind('pad'):
+      if library not in drillLibrary:
+        drillLibrary[library] = {}
+      if part not in drillLibrary[library]:
+        drillLibrary[library][part] = []
+      drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill'])/2,totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
+
     for elem3 in elem2.iterfind('polygon[@layer="46"]'):
       if library not in milledVolumesLibrary:
         milledVolumesLibrary[library] = {}
@@ -257,6 +264,10 @@ for elem in drawing.iterfind('board/elements/element'):
     for elem2 in milledVolumesLibrary[elem.attrib['library']][elem.attrib['package']]:
       milledVolume = getPlacedModel(elem, elem2,0)
       milledVolumes.append(milledVolume)
+  if elem.attrib['library'] in drillLibrary and elem.attrib['package'] in drillLibrary[elem.attrib['library']]:
+    for elem2 in drillLibrary[elem.attrib['library']][elem.attrib['package']]:
+      hole = getPlacedModel(elem, elem2,0)
+      holes.append(hole)
   
   #collect used footprints
   footprint = elem.attrib['package']
@@ -356,7 +367,7 @@ for extruded in PCBs:
   axis = Base.Vector(0,0,1)
   position = Base.Vector(0,0,0)
   
-  for elem in drawing.iterfind('board/plain/text[@layer="100"]'):
+  for elem in drawing.iterfind('board/plain/text[@layer="223"]'):
     if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
      #print "found $text"
       keyValue = elem.text.split('=')
@@ -384,7 +395,7 @@ for extruded in PCBs:
   for part in parts:
     if extruded.isInside(part.Placement.Base, 0.000001, True):
       extruded = extruded.fuse(part)
-      parts.remove(part)
+      part.nullify()
 
   #now when the pcb if fully populated perform transformations to align it correctly in 3d space
   extruded.rotate(Base.Vector(0,0,0), axis, angle)
@@ -393,7 +404,8 @@ for extruded in PCBs:
   Part.show(extruded)
 
 for part in parts:
-  Part.show(part)
+  if not part.isNull():
+    Part.show(part)
 
 #filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
 #extruded.exportStep(filename)
