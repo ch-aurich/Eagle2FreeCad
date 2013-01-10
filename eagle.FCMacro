@@ -120,7 +120,7 @@ def getPlacedModel(part, model,height):
       
       p.translate(Base.Vector(0,0,height / 2))
       
-      p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),-rot)
+      p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),rot)
       mirrorMultiplicator = 1
       if (mirror[0] == 'M'):
         p.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 180)
