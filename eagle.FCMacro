@@ -36,42 +36,49 @@ def getAngle(x1,y1,x2,y2):
   return angle
 
 def getCurvedLine(x1,y1,x2,y2,curve):
-  #middle between start and end point
+#middle between start and end point
   x_mid = (x1 + x2) / 2
   y_mid = (y1 + y2) / 2
-  
+
   #difference between the points to calculate the angle of the direct line
   angle = getAngle(x1,y1,x2,y2)
-  
-  
+
+
   #add angle between mid and center points which is 90 degrees
   angle += 90
   
   #distance from point 1 to the middle point
   dist_1_mid = ((x1-x_mid)**2 + (y1-y_mid)**2)**0.5
-  
+
   #distance from the middle point to the center of the circle
   dist_mid_center = dist_1_mid / math.tan(math.radians(curve/2))
-    
+
   x_center = x_mid + dist_mid_center * math.cos(math.radians(angle))
   y_center = y_mid + dist_mid_center * math.sin(math.radians(angle))
 
   radius = ( (x_center - x1)**2 + (y_center - y1)**2)**0.5
-  
+
   #get angle from center to middle point
-  angle = getAngle(x_center, y_center, x_mid, y_mid)
+  #but only if they are different
+  if not (x_center == x_mid and y_center == y_mid):
+    angle = getAngle(x_center, y_center, x_mid, y_mid)
+
   #point 3 that is the last missing point to draw an arc
   x3 = x_center + radius * math.cos(math.radians(angle))
   y3 = y_center + radius * math.sin(math.radians(angle))
-  
+
   arc = Part.Arc(Base.Vector(x1,y1,0),Base.Vector(x3,y3,0),Base.Vector(x2,y2,0))
+  
+
   return arc
 
 def getLine(elem):
+  #TODO: change to commented code line - this will cause other parts of the source to fail: investigate it ;)
+  #if ('curve' not in elem.attrib):
   if ('curve' not in elem):
     return Part.makeLine((elem.attrib['x1'], elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
   else:
-    return getCurvedLine(elem.attrib['x1'], elem.attrib['y1'],elem.attrib['x2'], elem.attrib['y2'], elem.attrib['curve'])
+    return Part.Edge(getCurvedLine(float(elem.attrib['x1']), float(elem.attrib['y1']),float(elem.attrib['x2']), float(elem.attrib['y2']), float(elem.attrib['curve'])))
 
 def getEdgeByParams(x1,y1,x2,y2,curve):
   if (curve == 0):
@@ -204,13 +211,11 @@ for layer in layerSetup:
 
 #find lines that make up the dimensions of pcbs directly
 for elem in drawing.iterfind('board/plain/wire[@layer="20"]'):
-  tmpedge = Part.makeLine((elem.attrib['x1'],elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
-  edges.append(tmpedge);
+  edges.append(getLine(elem));
 
 #find lines that make up the milling of pcbs directly
 for elem in drawing.iterfind('board/plain/wire[@layer="46"]'):
-  tmpedge = Part.makeLine((elem.attrib['x1'],elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
-  milling.append(tmpedge);
+  milling.append(getLine(elem));
 
 #find parts that contain dimension lines or holes or millings
 for elem in drawing.iterfind('board/libraries/library'):
