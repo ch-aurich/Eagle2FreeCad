@@ -36,42 +36,49 @@ def getAngle(x1,y1,x2,y2):
   return angle
 
 def getCurvedLine(x1,y1,x2,y2,curve):
-  #middle between start and end point
+#middle between start and end point
   x_mid = (x1 + x2) / 2
   y_mid = (y1 + y2) / 2
-  
+
   #difference between the points to calculate the angle of the direct line
   angle = getAngle(x1,y1,x2,y2)
-  
-  
+
+
   #add angle between mid and center points which is 90 degrees
   angle += 90
   
   #distance from point 1 to the middle point
   dist_1_mid = ((x1-x_mid)**2 + (y1-y_mid)**2)**0.5
-  
+
   #distance from the middle point to the center of the circle
   dist_mid_center = dist_1_mid / math.tan(math.radians(curve/2))
-    
+
   x_center = x_mid + dist_mid_center * math.cos(math.radians(angle))
   y_center = y_mid + dist_mid_center * math.sin(math.radians(angle))
 
   radius = ( (x_center - x1)**2 + (y_center - y1)**2)**0.5
-  
+
   #get angle from center to middle point
-  angle = getAngle(x_center, y_center, x_mid, y_mid)
+  #but only if they are different
+  if not (x_center == x_mid and y_center == y_mid):
+    angle = getAngle(x_center, y_center, x_mid, y_mid)
+
   #point 3 that is the last missing point to draw an arc
   x3 = x_center + radius * math.cos(math.radians(angle))
   y3 = y_center + radius * math.sin(math.radians(angle))
-  
+
   arc = Part.Arc(Base.Vector(x1,y1,0),Base.Vector(x3,y3,0),Base.Vector(x2,y2,0))
+  
+
   return arc
 
 def getLine(elem):
+  #TODO: change to commented code line - this will cause other parts of the source to fail: investigate it ;)
+  #if ('curve' not in elem.attrib):
   if ('curve' not in elem):
     return Part.makeLine((elem.attrib['x1'], elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
   else:
-    return getCurvedLine(elem.attrib['x1'], elem.attrib['y1'],elem.attrib['x2'], elem.attrib['y2'], elem.attrib['curve'])
+    return Part.Edge(getCurvedLine(float(elem.attrib['x1']), float(elem.attrib['y1']),float(elem.attrib['x2']), float(elem.attrib['y2']), float(elem.attrib['curve'])))
 
 def getEdgeByParams(x1,y1,x2,y2,curve):
   if (curve == 0):
@@ -120,14 +127,18 @@ def getPlacedModel(part, model,height):
       
       p.translate(Base.Vector(0,0,height / 2))
       
-      p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),-rot)
+      p.rotate(Base.Vector(0,0,0),Base.Vector(0,0,1),rot)
       mirrorMultiplicator = 1
       if (mirror[0] == 'M'):
         p.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 180)
         mirrorMultiplicator = -1
       p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),0))
       #print "--------------------------------------------------------------------------------------"
-    return p
+    
+    returnVal = {}
+    returnVal['part'] = p
+    returnVal['usedAttrib'] = useAttributeForPosition
+    return returnVal
 
 def getWireFromPolygon(elem):
   millwire = []
@@ -157,6 +168,7 @@ filename = str(QtGui.QFileDialog.getOpenFileName(None, 'Open Eagle Board file','
 
 holes = []
 parts = []
+freeParts = []
 edges = []
 PCBs = []
 milling = []
@@ -199,13 +211,11 @@ for layer in layerSetup:
 
 #find lines that make up the dimensions of pcbs directly
 for elem in drawing.iterfind('board/plain/wire[@layer="20"]'):
-  tmpedge = Part.makeLine((elem.attrib['x1'],elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
-  edges.append(tmpedge);
+  edges.append(getLine(elem));
 
 #find lines that make up the milling of pcbs directly
 for elem in drawing.iterfind('board/plain/wire[@layer="46"]'):
-  tmpedge = Part.makeLine((elem.attrib['x1'],elem.attrib['y1'],0), (elem.attrib['x2'],elem.attrib['y2'],0))
-  milling.append(tmpedge);
+  milling.append(getLine(elem));
 
 #find parts that contain dimension lines or holes or millings
 for elem in drawing.iterfind('board/libraries/library'):
@@ -230,6 +240,13 @@ for elem in drawing.iterfind('board/libraries/library'):
       if part not in drillLibrary[library]:
         drillLibrary[library][part] = []
       drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill']),totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
+    for elem3 in elem2.iterfind('pad'):
+      if library not in drillLibrary:
+        drillLibrary[library] = {}
+      if part not in drillLibrary[library]:
+        drillLibrary[library][part] = []
+      drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill'])/2,totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
+
     for elem3 in elem2.iterfind('polygon[@layer="46"]'):
       if library not in milledVolumesLibrary:
         milledVolumesLibrary[library] = {}
@@ -246,17 +263,21 @@ for elem in drawing.iterfind('board/elements/element'):
   #use parts from library to finish list of dimensions
   if elem.attrib['library'] in dimensionLibrary and elem.attrib['package'] in dimensionLibrary[elem.attrib['library']]:
     for elem2 in dimensionLibrary[elem.attrib['library']][elem.attrib['package']]:
-      dimensionLineCpy = getPlacedModel(elem, elem2,0)
+      dimensionLineCpy = getPlacedModel(elem, elem2,0)['part']
       edges.append(dimensionLineCpy)
   #use parts from library to finish list of millings
   if elem.attrib['library'] in millingLibrary and elem.attrib['package'] in millingLibrary[elem.attrib['library']]:
     for elem2 in millingLibrary[elem.attrib['library']][elem.attrib['package']]:
-      millingLineCpy = getPlacedModel(elem, elem2,0)
+      millingLineCpy = getPlacedModel(elem, elem2,0)['part']
       milling.append(millingLineCpy)
   if elem.attrib['library'] in milledVolumesLibrary and elem.attrib['package'] in milledVolumesLibrary[elem.attrib['library']]:
     for elem2 in milledVolumesLibrary[elem.attrib['library']][elem.attrib['package']]:
-      milledVolume = getPlacedModel(elem, elem2,0)
+      milledVolume = getPlacedModel(elem, elem2,0)['part']
       milledVolumes.append(milledVolume)
+  if elem.attrib['library'] in drillLibrary and elem.attrib['package'] in drillLibrary[elem.attrib['library']]:
+    for elem2 in drillLibrary[elem.attrib['library']][elem.attrib['package']]:
+      hole = getPlacedModel(elem, elem2,0)['part']
+      holes.append(hole)
   
   #collect used footprints
   footprint = elem.attrib['package']
@@ -287,7 +308,10 @@ for elem in drawing.iterfind('board/elements/element'):
     missingpackages[footprint] = 'reported'
   elif packages[footprint] != '':
     p = getPlacedModel(elem, packages[footprint], totalHeight)
-    parts.append(p)
+    if (p['usedAttrib']==False):
+      parts.append(p['part'])
+    else:
+      freeParts.append(p['part'])
 
 
 #sort edges to form a single closed 2D shape
@@ -356,7 +380,7 @@ for extruded in PCBs:
   axis = Base.Vector(0,0,1)
   position = Base.Vector(0,0,0)
   
-  for elem in drawing.iterfind('board/plain/text[@layer="100"]'):
+  for elem in drawing.iterfind('board/plain/text[@layer="223"]'):
     if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
      #print "found $text"
       keyValue = elem.text.split('=')
@@ -384,7 +408,7 @@ for extruded in PCBs:
   for part in parts:
     if extruded.isInside(part.Placement.Base, 0.000001, True):
       extruded = extruded.fuse(part)
-      parts.remove(part)
+      part.nullify()
 
   #now when the pcb if fully populated perform transformations to align it correctly in 3d space
   extruded.rotate(Base.Vector(0,0,0), axis, angle)
@@ -393,7 +417,12 @@ for extruded in PCBs:
   Part.show(extruded)
 
 for part in parts:
+  if not part.isNull():
+    Part.show(part)
+
+for part in freeParts:
   Part.show(part)
+
 
 #filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
 #extruded.exportStep(filename)
