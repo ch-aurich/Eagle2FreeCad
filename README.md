@@ -3,6 +3,8 @@ Eagle2FreeCad
 
 This expansion to freecad imports your eagle boards. If you have STEP Models of your parts available it will model the ready to use pcb. You can even have multiple PCBs in a single board file. These boards can be assembled in a certain way. See the Wikipage on Github for more information.
 
+Please note that this just works for the recently introduced XML Format of Eagle 6.
+
 License
 ======
 
