@@ -13,7 +13,7 @@ This software is licenced under CC-BY (http://creativecommons.org/licenses/by/3.
 Installation
 ===========
 
-- download eagle2freecad.py
+- download eagle.FCMacro
 - put it in your freecad macro folder
 - optional: make sure that the option to print python output in the console is active
 
