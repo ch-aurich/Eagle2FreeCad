@@ -201,13 +201,14 @@ layerSetup       = layerSetup.replace('[', ' ').replace(']',' ').strip().split('
 
 lastLayer        = -1
 for layer in layerSetup:
-  #print "Layer: ", layer
-  #print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
-  totalHeight += float(layerThicknesses[int(layer)-1])
-  if (lastLayer >= 0):
-    #print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
-    totalHeight += float(layerSpacings[int(lastLayer)-1])
-  lastLayer = layer
+  if not layer=='':
+    #print "Layer: ", layer
+    #print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
+    totalHeight += float(layerThicknesses[int(layer)-1])
+    if (lastLayer >= 0):
+      #print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
+      totalHeight += float(layerSpacings[int(lastLayer)-1])
+    lastLayer = layer
 
 #find lines that make up the dimensions of pcbs directly
 for elem in drawing.iterfind('board/plain/wire[@layer="20"]'):
