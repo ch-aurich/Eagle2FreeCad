@@ -15,7 +15,7 @@ import os
 import string
 
 
-eagle_dimension_layer = 50
+eagle_dimension_layer = 20
 setting_cut_holes = False
 
 
@@ -23,6 +23,43 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import xml.etree.ElementTree as ET
+
+
+def getElementByPathAndAttrib(elem, path, name, value):
+  for e in elem.iterfind(path):
+    if e.attrib.get(name)==value:
+      return e;
+
+
+def getPCBThickness(element):
+  #get total Height of PCB
+  totalHeight = 0
+  layerThicknesses = getElementByPathAndAttrib(drawing, "board/designrules/param", "name", "mtCopper")
+  layerThicknesses = layerThickness.attrib['value'];
+  layerThicknesses = layerThicknesses.translate(None, string.letters).split(' ')
+
+  layerSpacings    = getElementByPathAndAttrib(drawing, 'board/designrules/param', 'name',"mtIsolate")
+  layerSpacings    = layerSpacings.attrib['value']
+  layerSpacings    = layerSpacings.translate(None, string.letters).split(' ')
+
+  layerSetup       = getElementByPathAndAttrib(drawing, 'board/designrules/param', 'name',"layerSetup")
+  layerSetup       = layerSetup.attrib['value']
+  layerSetup       = layerSetup.replace('*',' ').replace('+',' ')
+  layerSetup       = layerSetup.replace('(', ' ').replace(')',' ')
+  layerSetup       = layerSetup.replace('[', ' ').replace(']',' ').strip().split(' ')
+
+  lastLayer        = -1
+  for layer in layerSetup:
+    if not layer=='':
+      #print "Layer: ", layer
+      #print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
+      totalHeight += float(layerThicknesses[int(layer)-1])
+      if (lastLayer >= 0):
+        #print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
+        totalHeight += float(layerSpacings[int(lastLayer)-1])
+      lastLayer = layer
+  return totalHeight
+
 
 def getAngle(x1,y1,x2,y2):
   x_diff = x2-x1
@@ -97,17 +134,17 @@ def getPlacedModel(part, model,height):
     
     p = model.copy()
     
-    angle = elem.find('attribute[@name="ANGLE"]')
+    angle = getElementByPathAndAttrib(elem,'attribute','name',"ANGLE")
     if (angle != None):
       #print "#"
       angle = angle.attrib['value'].split(',')
       angle = float(angle[0])
-      axis = elem.find('attribute[@name="AXIS"]')
+      axis = getElementByPathAndAttrib(elem,'attribute','name',"AXIS")
       if (axis != None):
         #print "#"
         axis = axis.attrib['value'].split(',')
         axis = Base.Vector(float(axis[0]),float(axis[1]),float(axis[2]))
-        position = elem.find('attribute[@name="POSITION"]')
+        position = getElementByPathAndAttrib(elem,'attribute','name',"POSITION")
         if (position != None):        
           #print "#"
           position = position.attrib['value'].split(',')
@@ -190,56 +227,35 @@ drillLibrary = {}
 millingLibrary = {}
 milledVolumesLibrary = {}
 
-
-#get total Height of PCB
-totalHeight = 0
-layerThicknesses = drawing.find('board/designrules/param[@name="mtCopper"]').attrib['value']
-layerThicknesses = layerThicknesses.translate(None, string.letters).split(' ')
-
-layerSpacings    = drawing.find('board/designrules/param[@name="mtIsolate"]').attrib['value']
-layerSpacings    = layerSpacings.translate(None, string.letters).split(' ')
-
-layerSetup       = drawing.find('board/designrules/param[@name="layerSetup"]').attrib['value']
-layerSetup       = layerSetup.replace('*',' ').replace('+',' ')
-layerSetup       = layerSetup.replace('(', ' ').replace(')',' ')
-layerSetup       = layerSetup.replace('[', ' ').replace(']',' ').strip().split(' ')
-
-lastLayer        = -1
-for layer in layerSetup:
-  if not layer=='':
-    #print "Layer: ", layer
-    #print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
-    totalHeight += float(layerThicknesses[int(layer)-1])
-    if (lastLayer >= 0):
-      #print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
-      totalHeight += float(layerSpacings[int(lastLayer)-1])
-    lastLayer = layer
-
 #find lines that make up the dimensions of pcbs directly
-for elem in drawing.iterfind('board/plain/wire[@layer="'+str(eagle_dimension_layer)+'"]'):
-  edges.append(getLine(elem));
+for elem in drawing.iterfind('board/plain/wire'):
+  if elem.attrib['layer']==str(eagle_dimension_layer):
+    edges.append(getLine(elem));
 
 #find lines that make up the milling of pcbs directly
-for elem in drawing.iterfind('board/plain/wire[@layer="46"]'):
-  milling.append(getLine(elem));
+for elem in drawing.iterfind('board/plain/wire'):
+  if elem.attrib['layer']=="46":
+    milling.append(getLine(elem));
 
 #find parts that contain dimension lines or holes or millings
 for elem in drawing.iterfind('board/libraries/library'):
   library = elem.attrib['name']
   for elem2 in elem.iterfind('packages/package'):
     part = elem2.attrib['name']
-    for elem3 in elem2.iterfind('wire[@layer="20"]'):
-      if library not in dimensionLibrary:
-        dimensionLibrary[library] = {}
-      if part not in dimensionLibrary[library]:
-        dimensionLibrary[library][part] = []
-      dimensionLibrary[library][part].append(getLine(elem3))
-    for elem3 in elem2.iterfind('wire[@layer="46"]'):
-      if library not in millingLibrary:
-        millingLibrary[library] = {}
-      if part not in millingLibrary[library]:
-        millingLibrary[library][part] = []
-      millingLibrary[library][part].append(getLine(elem3))
+    for elem3 in elem2.iterfind('wire'):
+      if elem3.attrib["layer"]=="20":
+        if library not in dimensionLibrary:
+          dimensionLibrary[library] = {}
+        if part not in dimensionLibrary[library]:
+          dimensionLibrary[library][part] = []
+        dimensionLibrary[library][part].append(getLine(elem3))
+    for elem3 in elem2.iterfind('wire'):
+      if elem3.attrib['layer']=="46":
+        if library not in millingLibrary:
+          millingLibrary[library] = {}
+        if part not in millingLibrary[library]:
+          millingLibrary[library][part] = []
+        millingLibrary[library][part].append(getLine(elem3))
     for elem3 in elem2.iterfind('hole'):
       if library not in drillLibrary:
         drillLibrary[library] = {}
@@ -253,15 +269,16 @@ for elem in drawing.iterfind('board/libraries/library'):
         drillLibrary[library][part] = []
       drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill'])/2,totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
 
-    for elem3 in elem2.iterfind('polygon[@layer="46"]'):
-      if library not in milledVolumesLibrary:
-        milledVolumesLibrary[library] = {}
-      if part not in milledVolumesLibrary[library]:
-        milledVolumesLibrary[library][part] = []
-      millwire = getWireFromPolygon(elem3)
-      millwire = Part.Face(millwire)
-      millwire.translate(Base.Vector(0,0,-totalHeight/2))
-      milledVolumesLibrary[library][part].append(millwire.extrude(Base.Vector(0,0,totalHeight)))
+    for elem3 in elem2.iterfind('polygon'):
+      if elem3.attrib["layer"]=="46":
+        if library not in milledVolumesLibrary:
+          milledVolumesLibrary[library] = {}
+        if part not in milledVolumesLibrary[library]:
+          milledVolumesLibrary[library][part] = []
+        millwire = getWireFromPolygon(elem3)
+        millwire = Part.Face(millwire)
+        millwire.translate(Base.Vector(0,0,-totalHeight/2))
+        milledVolumesLibrary[library][part].append(millwire.extrude(Base.Vector(0,0,totalHeight)))
 
 
 
@@ -287,8 +304,9 @@ for elem in drawing.iterfind('board/elements/element'):
   
   #collect used footprints
   footprint = elem.attrib['package']
-  for attribute in elem.iterfind('attribute[@name="STEP"]'):
-    footprint = attribute.attrib['value']
+  for attribute in elem.iterfind('attribute'):
+    if attribute.attrib['name']=="STEP":
+      footprint = attribute.attrib['value']
   packages[footprint] = ''
 
 #look for files with ending .stp or .step and import the models
@@ -307,8 +325,9 @@ for dirname, dirnames, filenames in os.walk(libFolder):
 #insert parts in drawing using the already imported packages
 for elem in drawing.iterfind('board/elements/element'):
   footprint = elem.attrib['package']
-  for attribute in elem.iterfind('attribute[@name="STEP"]'):
-    footprint = attribute.attrib['value']
+  for attribute in elem.iterfind('attribute'):
+    if attribute.attrib['name']=="STEP":
+      footprint = attribute.attrib['value']
   if (packages[footprint] == '' and footprint not in missingpackages):
     print "missing package ", footprint
     missingpackages[footprint] = 'reported'
@@ -405,21 +424,22 @@ else:
     axis = Base.Vector(0,0,1)
     position = Base.Vector(0,0,0)
     
-    for elem in drawing.iterfind('board/plain/text[@layer="223"]'):
-      if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
-       #print "found $text"
-        keyValue = elem.text.split('=')
-        if keyValue[0] == "angle":
-          angle = float(keyValue[1])
-         #print "found angle"
-        if keyValue[0] == "axis":
-          splitValue = keyValue[1].split(',')
-          axis = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
-         #print "found axis"
-        if keyValue[0] == "position":
-          splitValue = keyValue[1].split(',')
-          position = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
-         #print "found position"
+    for elem in drawing.iterfind('board/plain/text'):
+      if elem.attrib['layer']=="223":
+        if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
+         #print "found $text"
+          keyValue = elem.text.split('=')
+          if keyValue[0] == "angle":
+            angle = float(keyValue[1])
+           #print "found angle"
+          if keyValue[0] == "axis":
+            splitValue = keyValue[1].split(',')
+            axis = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
+           #print "found axis"
+          if keyValue[0] == "position":
+            splitValue = keyValue[1].split(',')
+            position = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
+           #print "found position"
     
     #remove milled areas of the pcb
     for milledVolume in milledVolumes:
