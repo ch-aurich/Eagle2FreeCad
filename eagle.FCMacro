@@ -26,7 +26,7 @@ except ImportError:
 
 
 def getElementByPathAndAttrib(elem, path, name, value):
-  for e in elem.iterfind(path):
+  for e in elem.findall(path):
     if e.attrib.get(name)==value:
       return e;
 
@@ -35,7 +35,7 @@ def getPCBThickness(element):
   #get total Height of PCB
   totalHeight = 0
   layerThicknesses = getElementByPathAndAttrib(drawing, "board/designrules/param", "name", "mtCopper")
-  layerThicknesses = layerThickness.attrib['value'];
+  layerThicknesses = layerThicknesses.attrib['value'];
   layerThicknesses = layerThicknesses.translate(None, string.letters).split(' ')
 
   layerSpacings    = getElementByPathAndAttrib(drawing, 'board/designrules/param', 'name',"mtIsolate")
@@ -187,7 +187,7 @@ def getWireFromPolygon(elem):
   lastPoint = ''
   firstPoint = ''
   curve = 0
-  for elem2 in elem.iterfind('vertex'):
+  for elem2 in elem.findall('vertex'):
     nextPoint = Base.Vector(float(elem2.attrib['x']),float(elem2.attrib['y']),0)
     if (lastPoint == ''):
       firstPoint = nextPoint
@@ -227,49 +227,51 @@ drillLibrary = {}
 millingLibrary = {}
 milledVolumesLibrary = {}
 
+totalHeight = getPCBThickness(drawing)
+
 #find lines that make up the dimensions of pcbs directly
-for elem in drawing.iterfind('board/plain/wire'):
+for elem in drawing.findall('board/plain/wire'):
   if elem.attrib['layer']==str(eagle_dimension_layer):
     edges.append(getLine(elem));
 
 #find lines that make up the milling of pcbs directly
-for elem in drawing.iterfind('board/plain/wire'):
+for elem in drawing.findall('board/plain/wire'):
   if elem.attrib['layer']=="46":
     milling.append(getLine(elem));
 
 #find parts that contain dimension lines or holes or millings
-for elem in drawing.iterfind('board/libraries/library'):
+for elem in drawing.findall('board/libraries/library'):
   library = elem.attrib['name']
-  for elem2 in elem.iterfind('packages/package'):
+  for elem2 in elem.findall('packages/package'):
     part = elem2.attrib['name']
-    for elem3 in elem2.iterfind('wire'):
+    for elem3 in elem2.findall('wire'):
       if elem3.attrib["layer"]=="20":
         if library not in dimensionLibrary:
           dimensionLibrary[library] = {}
         if part not in dimensionLibrary[library]:
           dimensionLibrary[library][part] = []
         dimensionLibrary[library][part].append(getLine(elem3))
-    for elem3 in elem2.iterfind('wire'):
+    for elem3 in elem2.findall('wire'):
       if elem3.attrib['layer']=="46":
         if library not in millingLibrary:
           millingLibrary[library] = {}
         if part not in millingLibrary[library]:
           millingLibrary[library][part] = []
         millingLibrary[library][part].append(getLine(elem3))
-    for elem3 in elem2.iterfind('hole'):
+    for elem3 in elem2.findall('hole'):
       if library not in drillLibrary:
         drillLibrary[library] = {}
       if part not in drillLibrary[library]:
         drillLibrary[library][part] = []
       drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill']),totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
-    for elem3 in elem2.iterfind('pad'):
+    for elem3 in elem2.findall('pad'):
       if library not in drillLibrary:
         drillLibrary[library] = {}
       if part not in drillLibrary[library]:
         drillLibrary[library][part] = []
       drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill'])/2,totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
 
-    for elem3 in elem2.iterfind('polygon'):
+    for elem3 in elem2.findall('polygon'):
       if elem3.attrib["layer"]=="46":
         if library not in milledVolumesLibrary:
           milledVolumesLibrary[library] = {}
@@ -282,7 +284,7 @@ for elem in drawing.iterfind('board/libraries/library'):
 
 
 
-for elem in drawing.iterfind('board/elements/element'):
+for elem in drawing.findall('board/elements/element'):
   #use parts from library to finish list of dimensions
   if elem.attrib['library'] in dimensionLibrary and elem.attrib['package'] in dimensionLibrary[elem.attrib['library']]:
     for elem2 in dimensionLibrary[elem.attrib['library']][elem.attrib['package']]:
@@ -304,7 +306,7 @@ for elem in drawing.iterfind('board/elements/element'):
   
   #collect used footprints
   footprint = elem.attrib['package']
-  for attribute in elem.iterfind('attribute'):
+  for attribute in elem.findall('attribute'):
     if attribute.attrib['name']=="STEP":
       footprint = attribute.attrib['value']
   packages[footprint] = ''
@@ -323,9 +325,9 @@ for dirname, dirnames, filenames in os.walk(libFolder):
 
 
 #insert parts in drawing using the already imported packages
-for elem in drawing.iterfind('board/elements/element'):
+for elem in drawing.findall('board/elements/element'):
   footprint = elem.attrib['package']
-  for attribute in elem.iterfind('attribute'):
+  for attribute in elem.findall('attribute'):
     if attribute.attrib['name']=="STEP":
       footprint = attribute.attrib['value']
   if (packages[footprint] == '' and footprint not in missingpackages):
@@ -424,7 +426,7 @@ else:
     axis = Base.Vector(0,0,1)
     position = Base.Vector(0,0,0)
     
-    for elem in drawing.iterfind('board/plain/text'):
+    for elem in drawing.findall('board/plain/text'):
       if elem.attrib['layer']=="223":
         if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
          #print "found $text"
