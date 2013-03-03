@@ -16,7 +16,7 @@ import string
 
 
 eagle_dimension_layer = 20
-setting_cut_holes = True
+setting_cut_holes = False
 
 
 try:
