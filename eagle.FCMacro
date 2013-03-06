@@ -238,6 +238,11 @@ for elem in drawing.findall('board/plain/wire'):
 for elem in drawing.findall('board/plain/wire'):
   if elem.attrib['layer']=="46":
     milling.append(getLine(elem));
+    
+#find vias
+for elem in drawing.findall('board/signals/signal/via'):
+  holes.append(Part.makeCylinder(float(elem.attrib['drill'])/2,totalHeight,Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),-totalHeight/2)))
+
 
 #find parts that contain dimension lines or holes or millings
 for elem in drawing.findall('board/libraries/library'):
