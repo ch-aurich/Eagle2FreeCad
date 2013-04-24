@@ -224,6 +224,8 @@ def getWireFromPolygon(elem):
     
   return Part.Wire(millwire)
 
+
+
 libFolder = ''
 filename = ''
 libFolder = str(QtGui.QFileDialog.getExistingDirectory(None, "Select Directory for Libraries"))
@@ -499,8 +501,3 @@ else:
 
   for part in freeParts:
     Part.show(part)
-
-
-  #filename = str(QtGui.QFileDialog.getSaveFileName(None, 'SAVE as STEP Model',''))
-  #extruded.exportStep(filename)
-
