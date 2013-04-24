@@ -479,11 +479,13 @@ else:
       for hole in holes:
         extruded = extruded.cut(hole)
 
-    #combine pcb and part if the part is on this pcb
+    #find parts on this pcb (actually IN the PCB) and perform translation and rotation as for the pcb
+    parts_for_fuse = []
     for part in parts:
       if extruded.isInside(part.Placement.Base, 0.000001, True):
-        extruded = extruded.fuse(part)
-        part.nullify()
+		part.rotate(Base.Vector(0,0,0), axis, angle)
+		part.translate(position)		
+        #part.nullify()
 
     #now when the pcb if fully populated perform transformations to align it correctly in 3d space
     extruded.rotate(Base.Vector(0,0,0), axis, angle)
