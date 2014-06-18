@@ -292,7 +292,7 @@ for elem in drawing.findall('board/libraries/library'):
         drillLibrary[library] = {}
       if part not in drillLibrary[library]:
         drillLibrary[library][part] = []
-      drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill']),totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
+      drillLibrary[library][part].append(Part.makeCylinder(float(elem3.attrib['drill'])/2,totalHeight,Base.Vector(float(elem3.attrib['x']),float(elem3.attrib['y']),-totalHeight/2)))
     for elem3 in elem2.findall('pad'):
       if library not in drillLibrary:
         drillLibrary[library] = {}
