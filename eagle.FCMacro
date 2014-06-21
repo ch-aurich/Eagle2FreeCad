@@ -476,10 +476,6 @@ else:
     for milledVolume in milledVolumes:
       extruded = extruded.cut(milledVolume)
 
-    #cut out all drilled holes
-    if setting_cut_holes==True:
-      for hole in holes:
-        extruded = extruded.cut(hole)
 
     #find parts on this pcb (actually IN the PCB) and perform translation and rotation as for the pcb
     parts_for_fuse = []
@@ -488,6 +484,12 @@ else:
 		part.rotate(Base.Vector(0,0,0), axis, angle)
 		part.translate(position)		
         #part.nullify()
+
+    #cut out all drilled holes
+    if setting_cut_holes==True:
+      for hole in holes:
+        #extruded = extruded.cut(hole)
+
 
     #now when the pcb if fully populated perform transformations to align it correctly in 3d space
     extruded.rotate(Base.Vector(0,0,0), axis, angle)
