@@ -488,7 +488,7 @@ else:
     #cut out all drilled holes
     if setting_cut_holes==True:
       for hole in holes:
-        #extruded = extruded.cut(hole)
+        extruded = extruded.cut(hole)
 
 
     #now when the pcb if fully populated perform transformations to align it correctly in 3d space
