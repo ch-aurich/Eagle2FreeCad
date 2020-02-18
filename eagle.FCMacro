@@ -74,11 +74,11 @@ def getPCBThickness(element):
   lastLayer        = -1
   for layer in layerSetup:
     if not layer=='':
-      #print "Layer: ", layer
-      #print "adding thickness of layer: ", layerThicknesses[int(layer)-1]
+      #print("Layer: ", layer)
+      #print("adding thickness of layer: ", layerThicknesses[int(layer)-1])
       totalHeight += float(layerThicknesses[int(layer)-1])
       if (lastLayer >= 0):
-        #print "adding thickness of spacing: ", layerSpacings[int(lastLayer)-1]
+        #print("adding thickness of spacing: ", layerSpacings[int(lastLayer)-1])
         totalHeight += float(layerSpacings[int(lastLayer)-1])
       lastLayer = layer
   return totalHeight
@@ -158,26 +158,26 @@ def getPlacedModel(part, model,height):
     
     angle = getElementByPathAndAttrib(elem,'attribute','name',"ANGLE")
     if (angle != None):
-      #print "#"
+      #print("#")
       angle = angle.attrib['value'].split(',')
       angle = float(angle[0])
       axis = getElementByPathAndAttrib(elem,'attribute','name',"AXIS")
       if (axis != None):
-        #print "#"
+        #print("#")
         axis = axis.attrib['value'].split(',')
         axis = Base.Vector(float(axis[0]),float(axis[1]),float(axis[2]))
         position = getElementByPathAndAttrib(elem,'attribute','name',"POSITION")
         if (position != None):        
-          #print "#"
+          #print("#")
           position = position.attrib['value'].split(',')
           position = Base.Vector(float(position[0]),float(position[1]),float(position[2]))
           if (not angle == 0):
             p.rotate(Base.Vector(0,0,0), axis, angle)
-          print "done rotation"
+          print("done rotation")
           p.translate(position)
-          print "done position"
+          print("done position")
           useAttributeForPosition = True
-          #print "##################################################################################"
+          #print("##################################################################################")
     #else:
       #print angle
     
@@ -197,7 +197,7 @@ def getPlacedModel(part, model,height):
         p.rotate(Base.Vector(0,0,0), Base.Vector(0,1,0), 180)
         mirrorMultiplicator = -1
       p.translate(Base.Vector(float(part.attrib['x']),float(part.attrib['y']),0))
-      #print "--------------------------------------------------------------------------------------"
+      #print("--------------------------------------------------------------------------------------")
     
     returnVal = {}
     returnVal['part'] = p
@@ -360,7 +360,7 @@ for elem in drawing.findall('board/elements/element'):
     if attribute.attrib['name']=="STEP":
       footprint = attribute.attrib['value']
   if (packages[footprint] == '' and footprint not in missingpackages):
-    print "missing package ", footprint
+    print("missing package ", footprint)
     missingpackages[footprint] = 'reported'
   elif packages[footprint] != '':
     p = getPlacedModel(elem, packages[footprint], totalHeight)
@@ -374,7 +374,7 @@ for elem in drawing.findall('board/elements/element'):
 loopcounter = 0
 
 if (not len(edges)>0):
-  print "no PCBs found, are you using layer "+str(eagle_dimension_layer)+" for your dimensions?"
+  print("no PCBs found, are you using layer "+str(eagle_dimension_layer)+" for your dimensions?")
 else:
   newEdges = [];
   newEdges.append(edges.pop(0))
@@ -382,9 +382,9 @@ else:
   firstCoordinate = newEdges[0].Curve.StartPoint
   while(len(edges)>0 and loopcounter < 2):
     loopcounter = loopcounter + 1
-    #print "nextCoordinate: ", nextCoordinate
+    #print("nextCoordinate: ", nextCoordinate)
     for j, edge in enumerate(edges):
-      #print "compare to: ", edges[j].Curve.StartPoint, "/" , edges[j].Curve.EndPoint
+      #print("compare to: ", edges[j].Curve.StartPoint, "/" , edges[j].Curve.EndPoint)
       if edges[j].Curve.StartPoint == nextCoordinate:
         nextCoordinate = edges[j].Curve.EndPoint
         newEdges.append(edges.pop(j))
@@ -408,8 +408,8 @@ else:
         firstCoordinate = newEdges[0].Curve.StartPoint
 
   if loopcounter == 2:
-    print "*** omitting PCBs because there was a not closed loop in your dimension lines ***"
-    print "*** have a look at position x=" + str(nextCoordinate.x) + "mm, y=" + str(nextCoordinate.y) + "mm ***"
+    print("*** omitting PCBs because there was a not closed loop in your dimension lines ***")
+    print("*** have a look at position x=" + str(nextCoordinate.x) + "mm, y=" + str(nextCoordinate.y) + "mm ***")
 
 
 
@@ -423,9 +423,9 @@ else:
     firstCoordinate = newMilling[0].Curve.StartPoint
     while(len(milling)>0 and loopcounter < 2):
       loopcounter = loopcounter + 1
-      #print "nextCoordinate: ", nextCoordinate
+      #print("nextCoordinate: ", nextCoordinate)
       for j, edge in enumerate(milling):
-        #print "compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint
+        #print("compare to: ", milling[j].Curve.StartPoint, "/" , milling[j].Curve.EndPoint)
         if milling[j].Curve.StartPoint == nextCoordinate:
           loopcounter = 0
           nextCoordinate = milling[j].Curve.EndPoint
@@ -446,8 +446,8 @@ else:
           firstCoordinate = newMilling[0].Curve.StartPoint
 
   if loopcounter == 2:
-    print "*** omitting some millings because there was a not closed loop in your milling lines ***"
-    print "*** have a look at position x=" + str(nextCoordinate.x) + "mm, y=" + str(nextCoordinate.y) + "mm ***"
+    print("*** omitting some millings because there was a not closed loop in your milling lines ***")
+    print("*** have a look at position x=" + str(nextCoordinate.x) + "mm, y=" + str(nextCoordinate.y) + "mm ***")
 
   for extruded in PCBs:
     #search for orientation of each pcb in 3d space, save it (no transformation yet!)
@@ -458,19 +458,19 @@ else:
     for elem in drawing.findall('board/plain/text'):
       if elem.attrib['layer']=="223":
         if extruded.isInside(Base.Vector(float(elem.attrib['x']),float(elem.attrib['y']),0), 0.000001, True):
-         #print "found $text"
+         #print("found $text")
           keyValue = elem.text.split('=')
           if keyValue[0] == "angle":
             angle = float(keyValue[1])
-           #print "found angle"
+           #print("found angle")
           if keyValue[0] == "axis":
             splitValue = keyValue[1].split(',')
             axis = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
-           #print "found axis"
+           #print("found axis")
           if keyValue[0] == "position":
             splitValue = keyValue[1].split(',')
             position = Base.Vector(float(splitValue[0]),float(splitValue[1]),float(splitValue[2]))
-           #print "found position"
+           #print("found position")
     
     #remove milled areas of the pcb
     for milledVolume in milledVolumes:
@@ -481,8 +481,8 @@ else:
     parts_for_fuse = []
     for part in parts:
       if extruded.isInside(part.Placement.Base, 0.000001, True):
-		part.rotate(Base.Vector(0,0,0), axis, angle)
-		part.translate(position)		
+        part.rotate(Base.Vector(0,0,0), axis, angle)
+        part.translate(position)		
         #part.nullify()
 
     #cut out all drilled holes
